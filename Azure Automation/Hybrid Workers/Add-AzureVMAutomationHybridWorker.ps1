@@ -1,30 +1,81 @@
+<#
+.SYNOPSIS
+    Script to add an Azure VM as a Azure Automation Hybrid Worker
+
+.DESCRIPTION
+    This script is used to add an Azure VM as a Azure Automation Hybrid Worker.
+    You must run this on the VM to be used as a Hybrid Worker.
+    You must have an Automation Account and Log Analytics Workspace already created.
+    You must be an owner of the Automation Account, Log Analytics Workspace and the VM where this is being run.
+    This requires an elevated PowerShell session.
+    The script will perform the following actions:
+        Turn off Internet Explorer Enhanced Security.
+        Install all required AZ Modules.
+        Connect to Azure and prompt you for the environment and location.
+        Ensure that AzureAutomation, ChangeTracking, Updates, AgentHealthAssessment Operational Insights Intelligence Packs are enabled.
+        Install the Microsoft Monitoring Agent Extension on the VM.
+        Add the new Hybrid Worker to the Automation Account in the group specified.
+
+.PARAMETER LogAnalyticsResourceGroupName
+    Specify the Log Analytics Resource Group Name.
+    Example Prod-LA-RG
+
+.PARAMETER LogAnalyticsWorkspaceName
+    Specify the Log Analytics Workspace Name.
+    Example Prod-LA-WS
+
+.PARAMETER AzureAutomationAccountResourceGroupName
+    Specify the Automation Account Resource Group Name.
+    Example Azure-Automation-RG
+
+.PARAMETER AutomationAccountName
+    Specify the Automation Account Name. 
+    Example Prod-AzureAutomation-Acct
+
+.PARAMETER HybridWorkerGroupName
+    Specify the Hybrid Workers Group Name. 
+    Example Tier1-Workers
+
+.PARAMETER HybridWorkerResourceGroupName
+    Specify the Hybrid Workers Resource Group. 
+    Example Azure-Automation-Workers-RG
+
+.EXAMPLE
+    .\Add-AzureVMAutomationHybridWorker -LogAnalyticsResourceGroupName 'Prod-LA-RG' `
+        -LogAnalyticsWorkspaceName 'Prod-LA-WS' `
+        -AzureAutomationAccountResourceGroupName 'Azure-Automation-RG' `
+        -AutomationAccountName 'Prod-AzureAutomation-Acct' `
+        -HybridWorkerGroupName 'Tier1-Workers' `
+        -HybridWorkerResourceGroupName 'Azure-Automation-Workers-RG'
+#>
 #Requires -RunAsAdministrator
 
 [CmdletBinding()]
 Param
 (
-    # Setup initial variables
-    [Parameter(Mandatory=$false)]
-    [String] $AzureAutomationAccountResourceGroupName = 'Azure-Automation-RG',
+    # Log Analytics Resource Group Name
+    [Parameter(Mandatory=$true,HelpMessage="Specify the Log Analytics Resource Group Name. Example Prod-LA-RG")]
+    [String] $LogAnalyticsResourceGroupName,
 
-    [Parameter(Mandatory=$false)]
-    [String] $LogAnalyticsResourceGroupName = 'Prod-LA-RG',
+    # Log Analytics Workspace Name
+    [Parameter(Mandatory=$true,HelpMessage="Specify the Log Analytics Workspace Name. Example Prod-LA-WS")]
+    [String] $LogAnalyticsWorkspaceName,
 
-    # OMS Workspace
-    [Parameter(Mandatory=$false)]
-    [String] $LogAnalyticsWorkspaceName = 'Prod-LA-WS',
+    # Automation Account Resource Group Name
+    [Parameter(Mandatory=$true,HelpMessage="Specify the Automation Account Resource Group Name. Example Azure-Automation-RG")]
+    [String] $AzureAutomationAccountResourceGroupName,
 
-    # Automation Account
-    [Parameter(Mandatory=$false)]
-    [String] $AutomationAccountName = 'Prod-AzureAutomation-Acct',
+    # Automation Account Name
+    [Parameter(Mandatory=$true,HelpMessage="Specify the Automation Account Name. Example Prod-AzureAutomation-Acct")]
+    [String] $AutomationAccountName,
 
-    # Hyprid Group
-    [Parameter(Mandatory=$false)]
-    [String] $HybridWorkerGroupName = 'Tier1-Workers',
+    # Hybrid Workers Group Name
+    [Parameter(Mandatory=$true,HelpMessage="Specify the Hybrid Workers Group Name. Example Tier1-Workers")]
+    [String] $HybridWorkerGroupName,
 
-    # Hybrid Worker Resource Group
-    [Parameter(Mandatory=$false)]
-    [String] $HybridWorkerResourceGroupName = 'Azure-Automation-Workers-RG'
+    # Hybrid Workers Resource Group
+    [Parameter(Mandatory=$true,HelpMessage="Specify the Hybrid Workers Resource Group. Example Azure-Automation-Workers-RG")]
+    [String] $HybridWorkerResourceGroupName
 )
 
 # Stop the script if any errors occur
@@ -149,7 +200,7 @@ try
 }
 catch
 {
-    Write-Output "No Agent"
+    Write-Output "Microsoft Monitoring Agent was not found. Installing...."
 
     Set-AzVMExtension -ExtensionName "MicrosoftMonitoringAgent" `
         -ResourceGroupName "$HybridWorkerResourceGroupName" `
